@@ -1,0 +1,15 @@
+{% extends 'layout.html' %}
+{% block title %}Login your account{% endblock %}
+{% block body %}
+<form action="" method="Post">
+      <input type="text" name="username" placeholder="username" required>
+      <input type="password" name="password" minlength="5" required>
+      <button>Submit</button>
+<form>
+	{% if error_message %}
+		<h3>{{ error_message }}</h3>
+		<h3>Please login again</h3>
+	{% else %}
+		<h3>Please enter your username and password</h3>
+	{% endif %}
+{%endblock%}

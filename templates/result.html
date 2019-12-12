@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block body %}
+<a href="{{ url_for('searchBook') }}">Search Again</a>
+{% if not books[0] %}
+    <h2>search is not found</h2>
+{% else %}
+    <h2>Search results is sorted by popularity</h2>
+
+    <ul>
+    	{% for book in books %}
+    		<li>
+                <p><a href="{{ url_for('bookDetail', id_api = book['book_id_api']) }}"> title: {{ book["title"] }} </a></p>
+    			<p>author: {{ book["author"] }}</p>			
+    			<p>average rating: {{ book["average_rating"] }}</p>
+                <p>check book id: {{ book["book_id_api"] }}</p>
+    		</li>
+    	{% endfor %}
+    </ul>
+{% endif %}
+{% endblock %}

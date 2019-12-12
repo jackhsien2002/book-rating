@@ -1,0 +1,28 @@
+{% extends 'layout.html' %}
+
+{% block title %}{{ book.title }}{% endblock %}
+
+{% block body %}
+{% if not book %}
+    <h3>The book you are search does not exist</h3>
+{% else %}
+    <h3> author : {{ book.author }}</h3>
+    <h3> year : {{ book.year }}</h3>
+    <h3> isbn : {{ book.isbn }}</h3> 
+    <h3> rating count : {{ book.work_rating_count }}</h3>
+    <h3> average rating : {{ book.average_rating }}</h3> 
+    <h3><a href="{{ url_for('searchBook') }}">Back to result</a></h3>
+
+    <h2>Review | average rating {{ book.mean_review_rating }}</h2>
+    {% for user in users_review %}
+        <h3>{{ user.username }}, rating {{ user.rating }}</h3>
+        <h3>{{ user.review }}
+    {% endfor %}
+    <h1>Give your review</h1>
+    <form action="{{ url_for('bookDetail', id_api = book.id_api) }}" method="POST">
+        <input type="text" name="review" placeholder="leave your review"><br>
+        <h3>your rating</h3><input type="number" name="rating">
+        <input type="submit">
+    </form>
+{% endif %}
+{% endblock %}

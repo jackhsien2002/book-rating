@@ -1,0 +1,9 @@
+{% extends 'layout.html' %}
+
+{% block title %}Home Page{% endblock %}
+
+{% block body %}
+This is home page.
+<p><a href="{{ url_for('loginPage') }}">Log in</a></p>
+<p><a href="{{ url_for('signUp') }}">Sign up</a></p>
+{% endblock %}

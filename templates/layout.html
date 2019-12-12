@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+	<head><h1>Search Books</h1></head>
+	<body>
+		{% if username %}
+			<p>Hi, {{ username }}. <a href="{{ url_for('logout') }}">log out.</a></p>
+		{% else %}
+			<p>You have not logged in yet</p>
+		{% endif %}
+
+		<h1>{% block heading %}{% endblock %}</h1>
+
+		{% block body %}
+		{% endblock %}
+	</body>
+</html>
