@@ -1,4 +1,5 @@
 import os
+import settings
 import requests
 from flask import Flask, session, render_template, request, jsonify
 from flask_session import Session
@@ -36,6 +37,17 @@ db = scoped_session(sessionmaker(bind=engine))
 #google_api_key
 KEY = "u0lC95Zxu3T3dwPdGcvlA";
 
+@celery.task(name = 'application.background_test')
+def background_test(amount):
+	time.sleep(amount)
+	return True
+
+@app.route("/test")
+def test():
+	background_test.delay(5)
+	return "A background time is running, wait for 3 seconds"
+
+
 @app.route("/")
 def homePage():
 	return render_template("index.html")
@@ -67,9 +79,7 @@ def findBook(url, q):
 	Here, we use element tree, which is like dictionary, to parse the xml. 
 	Every tags in xml corresponds to a node in the element tree, and we can retrieve the value of the tags by using key of the node.
 	'''
-	url =f"https://www.goodreads.com/search/index.xml"
 	response = requests.get(url, params = {"key" : KEY, "q" : q})
-	print(response)
 	root = ET.fromstring(response.content)
 	result = root[1][6]
 	books = [];
@@ -85,12 +95,18 @@ def findBook(url, q):
 		books = None
 		return books
 
+@celery.task(name= 'application.write_book_to_database')
+def write_book_to_database(book_info):
+	db.execute(
+        "INSERT INTO books (isbn, title, author, year, id_api, work_rating_count, average_rating) VALUES (:isbn, :title, :author, :year, :id_api, :work_rating_count, :average_rating)",
+        book_info)
+	db.commit()
+
 @app.route("/book_detail/<int:id_api>", methods = ["GET", "POST"])
 def bookDetail(id_api):
 	'''
 	given a book id, send a request to goodread
 	'''
-
 	book = db.execute("SELECT * FROM books WHERE id_api=:id_api",
 				{"id_api" : id_api}).fetchone()
 
@@ -98,9 +114,14 @@ def bookDetail(id_api):
 	if book is None:
 		#update lacking data to data base
 		#store column (isbn, title, author, year, id_api, work_rating_count, average_rating) 
+		url = "https://www.goodreads.com/book/show.xml"
 		start = time.time()
-		url = "https://www.goodreads.com/book/show.xml?key="
 		response = requests.get(url, params = {"key" : KEY, "id" : id_api})
+		end = time.time()
+		print(f"it takes {end - start} seconds to fetch response from goodreads")
+		####
+		start = time.time()
+
 		root = ET.fromstring(response.content)
 		#getting book_node at xml
 		book_node = root.find("book")
@@ -109,82 +130,80 @@ def bookDetail(id_api):
 		title = book_node.find("title").text
 		author = book_node.find("authors").find("author").find("name").text
 		year = book_node.find("publication_year").text
+		if year != None:
+			year = int(year)
 		average_rating = book_node.find("average_rating").text
+		if average_rating != None:
+			average_rating = float(average_rating)
 		work_rating_count = book_node.find("work").find("ratings_count").text
-		#convert book information into dcitionary
-		book_info = {"isbn" : isbn,
-					"title" : title, 
-	            	"author" : author,
-	            	"year" : int(year), 
-	            	"id_api" : int(id_api),
-	            	"work_rating_count" : int(work_rating_count), 
-	            	"average_rating" : float(average_rating)}
+		
 		end = time.time()
-		print(f"it takes {end - start} to extract book detail from xml")
-		try:
-			start = time.time()
-			db.execute(
-				"INSERT INTO books (isbn, title, author, year, id_api, work_rating_count, average_rating) VALUES (:isbn, :title, :author, :year, :id_api, :work_rating_count, :average_rating)",
-			    book_info
-			)
-			db.commit()
-			end = time.time()
-			print(f"it takes {end - start} to write book to database")
-		except:
-			return render_template('error.html')
+		print(f"{end - start} second to finish root finding")
+		###
+
+		start = time.time()
+		#convert book information into dcitionary
+		book = {
+			"isbn" : isbn,
+			"title" : title, 
+        	"author" : author,
+        	"year" : year, 
+        	"id_api" : int(id_api),
+        	"work_rating_count" : int(work_rating_count), 
+        	"average_rating" : float(average_rating),
+        	"mean_review_rating" : None
+        }
+		write_book_to_database.delay(book)
+		end = time.time()
+		print(f"{end - start} seconds to send celery worker to load data to database")
 
 	if request.method == "POST":
-		user_id = session["user_id"]
-		book_ids = db.execute(
-						"SELECT id FROM books WHERE id_api=:id_api",
-						{"id_api" : id_api}
-					).fetchone()
-		book_id = book_ids[0]
 
-		if not isUserWriteReview(book_id, user_id):	
+		user_id = session["user_id"]
+
+		if not isUserWriteReview(id_api, user_id):	
 
 			review = request.form.get("review")
 			rating =request.form.get("rating")
 
-			sql_command = "INSERT INTO reviews (review, rating, book_id, user_id) VALUES (:review, :rating, :book_id, :user_id)"
-			sql_parameters = {"review" : review,
-							  "rating" : rating,
-							  "book_id" : book_id,
-							  "user_id" : user_id}
+			sql_command = "INSERT INTO reviews (review, rating, book_id, user_id) \
+							VALUES (:review, :rating, :book_id, :user_id)"
+
+			sql_parameters = {
+				"review" : review,
+				"rating" : rating,
+				"book_id" : int(id_api),
+				"user_id" : user_id
+			}
+
 			db.execute(sql_command, sql_parameters)
 			db.commit()
 
-			mean_review_rating = getMeanReviewRating(book_id)
-			updateMeanRating(book_id, mean_review_rating)
+			mean_review_rating = getMeanReviewRating(int(id_api))
+			updateMeanRating(int(id_api), mean_review_rating)
+			book.mean_review_rating = mean_review_rating
+			
+	users_review = getBookReview(int(id_api))
 
-	book = db.execute("SELECT * FROM books WHERE id_api=:id_api",
-			{"id_api" : id_api}).fetchone()
-	users_review = getBookReview(book.id)
 	return render_template("book_detail.html", 
 							book = book, 
 							username = session["username"], 
 							users_review = users_review
 							)
 
-def write_book_to_database(bookinfo):
-	try:
-		start = time.time()
-		db.execute(
-			"INSERT INTO books (isbn, title, author, year, id_api, work_rating_count, average_rating) VALUES (:isbn, :title, :author, :year, :id_api, :work_rating_count, :average_rating)",
-		    book_info
-		)
-		db.commit()
-		end = time.time()
-		print(f"it takes {end - start} to write book to database")
-	except:
-		print('there is some error')
-
 def getBookReview(book_id):
 	'''given book id, retrieve its user review, rating
 	'''
+	#argument must be integer
+	assert isinstance(book_id, int)
+
+	#prepare sql command for alchemy
 	sql_command = "SELECT * FROM users JOIN reviews ON reviews.user_id=users.id WHERE book_id=:book_id"
 	sql_parameters = {"book_id" : book_id}
+
+	#query data from database by sql command
 	users = db.execute(sql_command, sql_parameters).fetchall()
+
 	return users
 
 def isUserWriteReview(book_id, user_id):
@@ -195,6 +214,7 @@ def isUserWriteReview(book_id, user_id):
 		return False
 	else:
 		return True
+
 def getMeanReviewRating(book_id):
 	sql_command = "SELECT rating FROM reviews WHERE book_id=:book_id"
 	sql_parameters = {"book_id" : book_id}
@@ -207,7 +227,7 @@ def getMeanReviewRating(book_id):
 	return total/count
 
 def updateMeanRating(book_id, mean_review_rating):
-	sql_command = "UPDATE books SET mean_review_rating=:mean_review_rating WHERE id=:book_id"
+	sql_command = "UPDATE books SET mean_review_rating=:mean_review_rating WHERE id_api=:book_id"
 	sql_parameters = {"mean_review_rating" : mean_review_rating,
 					  "book_id" : book_id}
 	db.execute(sql_command, sql_parameters)

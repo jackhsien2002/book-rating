@@ -1,9 +1,8 @@
 {% extends 'layout.html' %}
 
-{% block title %}Home Page{% endblock %}
-
+{% block title %}Book Store{% endblock %}
+{% block heading %}Book Store{% endblock %}
 {% block body %}
-This is home page.
-<p><a href="{{ url_for('loginPage') }}">Log in</a></p>
-<p><a href="{{ url_for('signUp') }}">Sign up</a></p>
+<p><a href="{{ url_for('loginPage') }}">Log in</a> to find and comment on your favorite book</p>
+<p><a href="{{ url_for('signUp') }}">Sign up</a> if you don't have an account</p>
 {% endblock %}

@@ -4,6 +4,7 @@ from flask import request
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 import xml.etree.ElementTree as ET
+import settings
 
 if not os.getenv("DATABASE_URL"):
 	raise RuntimeError("DATABASE_URL is not set")
@@ -216,22 +217,22 @@ def getMeanReviewRating(book_id):
 	return total/count
 
 def testGetMeanReviewRating():
-	book_id = 1
-	mean_rating = getMeanReviewRating(1)
+	book_id = 35613533
+	mean_rating = getMeanReviewRating(book_id)
 	print(f"mean rating: {mean_rating}")
 
 def updateMeanRating(book_id, mean_review_rating):
-	sql_command = "UPDATE books SET mean_review_rating=:mean_review_rating WHERE id=:book_id"
+	sql_command = "UPDATE books SET mean_review_rating=:mean_review_rating WHERE id_api=:book_id"
 	sql_parameters = {"mean_review_rating" : mean_review_rating,
 					  "book_id" : book_id}
 	db.execute(sql_command, sql_parameters)
 	db.commit()
 	
 def testUpdateMeanRating():
-	book_id = 1
+	book_id = 35613533
 	mean_rating = getMeanReviewRating(book_id)
 	updateMeanRating(book_id, mean_rating)
-	book = db.execute("SELECT mean_review_rating FROM books WHERE id=:book_id", {"book_id" : book_id}).fetchone()
+	book = db.execute("SELECT mean_review_rating FROM books WHERE id_api=:book_id", {"book_id" : book_id}).fetchone()
 	print(f"expect mean rating: {mean_rating}, acutal rating is {book.mean_review_rating}")
 
 def main():
