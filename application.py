@@ -5,16 +5,26 @@ from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 import xml.etree.ElementTree as ET
+from celery_worker import make_celery 
+import time
 
 app = Flask(__name__)
-app.config['DEBUG'] = True
+#app.config['DEBUG'] = True
+app.config.update(
+	DEBUG = True,
+	CELERY_BROKER_URL='redis://localhost:6379',
+	CELERY_RESULT_BACKEND='redis://localhost:6379'
+)
+
+celery = make_celery(app)
+
 
 
 # Check for environment variable
 if not os.getenv("DATABASE_URL"):
     raise RuntimeError("DATABASE_URL is not set")
 
-# Configure session to use filesystem
+# Configure session to use filesystem. Every users have their own session which would not be interfered by others
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
@@ -37,28 +47,29 @@ def searchBook():
 @app.route("/result", methods = ["POST"])
 def bookSearchResult():
 	query_string=""
+	#concatenate the three search fields, isbn, author, title, into a query_string. These fields are seperated by space.
+	isbn = request.form.get("isbn", "")
+	author = request.form.get("author", "")
+	title = request.form.get("title", "")
+	query_list = [isbn, author, title]
+	query_string = " ".join(query_list)
 
-	isbn = request.form.get("isbn")
-	if isbn != None:
-		query_string += isbn + " "
-
-	author = request.form.get("author")
-	if author != None:
-		query_string += author + " "
-
-	title = request.form.get("title")
-	if title != None:
-		query_string += title + " "
-
-	query_string = query_string[:-1]
-	url = "https://www.goodreads.com/search/index.xml"
-	books = findBook(url, query_string)
+	#using goodreads search API to search for the books we want
+	books = findBook("https://www.goodreads.com/search/index.xml", query_string)
 
 	return render_template("result.html", books = books, username = session["username"])
 
 def findBook(url, q):
+	'''
+	given a goodread search API and a query string, return a list of book dictionary.
+	with book dictionary, we can get value with keys like book id, title, author and average rating
+	When flask backend send a request to goodread, it responds with xml objects. 
+	Here, we use element tree, which is like dictionary, to parse the xml. 
+	Every tags in xml corresponds to a node in the element tree, and we can retrieve the value of the tags by using key of the node.
+	'''
 	url =f"https://www.goodreads.com/search/index.xml"
 	response = requests.get(url, params = {"key" : KEY, "q" : q})
+	print(response)
 	root = ET.fromstring(response.content)
 	result = root[1][6]
 	books = [];
@@ -76,6 +87,9 @@ def findBook(url, q):
 
 @app.route("/book_detail/<int:id_api>", methods = ["GET", "POST"])
 def bookDetail(id_api):
+	'''
+	given a book id, send a request to goodread
+	'''
 
 	book = db.execute("SELECT * FROM books WHERE id_api=:id_api",
 				{"id_api" : id_api}).fetchone()
@@ -84,6 +98,7 @@ def bookDetail(id_api):
 	if book is None:
 		#update lacking data to data base
 		#store column (isbn, title, author, year, id_api, work_rating_count, average_rating) 
+		start = time.time()
 		url = "https://www.goodreads.com/book/show.xml?key="
 		response = requests.get(url, params = {"key" : KEY, "id" : id_api})
 		root = ET.fromstring(response.content)
@@ -94,8 +109,6 @@ def bookDetail(id_api):
 		title = book_node.find("title").text
 		author = book_node.find("authors").find("author").find("name").text
 		year = book_node.find("publication_year").text
-		if year is None:
-			year = book_node.find("work").find("original_publication_year").text
 		average_rating = book_node.find("average_rating").text
 		work_rating_count = book_node.find("work").find("ratings_count").text
 		#convert book information into dcitionary
@@ -106,21 +119,19 @@ def bookDetail(id_api):
 	            	"id_api" : int(id_api),
 	            	"work_rating_count" : int(work_rating_count), 
 	            	"average_rating" : float(average_rating)}
-
-		#query data with isbn, see if book exists
-		book = db.execute("SELECT * FROM books WHERE isbn=:isbn",
-				{"isbn" : isbn}).fetchone()
-		#if book contains isbn
-		if book != None:
-			#update the database
-			db.execute(
-				"UPDATE books SET isbn=:isbn, title=:title, author=:author, year=:year, id_api=:id_api, work_rating_count=:work_rating_count, average_rating=:average_rating WHERE isbn=:isbn"
-				, book_info)
-		else:
+		end = time.time()
+		print(f"it takes {end - start} to extract book detail from xml")
+		try:
+			start = time.time()
 			db.execute(
 				"INSERT INTO books (isbn, title, author, year, id_api, work_rating_count, average_rating) VALUES (:isbn, :title, :author, :year, :id_api, :work_rating_count, :average_rating)",
-	            book_info)
-		db.commit()
+			    book_info
+			)
+			db.commit()
+			end = time.time()
+			print(f"it takes {end - start} to write book to database")
+		except:
+			return render_template('error.html')
 
 	if request.method == "POST":
 		user_id = session["user_id"]
@@ -154,6 +165,19 @@ def bookDetail(id_api):
 							username = session["username"], 
 							users_review = users_review
 							)
+
+def write_book_to_database(bookinfo):
+	try:
+		start = time.time()
+		db.execute(
+			"INSERT INTO books (isbn, title, author, year, id_api, work_rating_count, average_rating) VALUES (:isbn, :title, :author, :year, :id_api, :work_rating_count, :average_rating)",
+		    book_info
+		)
+		db.commit()
+		end = time.time()
+		print(f"it takes {end - start} to write book to database")
+	except:
+		print('there is some error')
 
 def getBookReview(book_id):
 	'''given book id, retrieve its user review, rating

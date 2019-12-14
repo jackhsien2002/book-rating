@@ -6,23 +6,66 @@
 {% if not book %}
     <h3>The book you are search does not exist</h3>
 {% else %}
-    <h3> author : {{ book.author }}</h3>
-    <h3> year : {{ book.year }}</h3>
-    <h3> isbn : {{ book.isbn }}</h3> 
-    <h3> rating count : {{ book.work_rating_count }}</h3>
-    <h3> average rating : {{ book.average_rating }}</h3> 
-    <h3><a href="{{ url_for('searchBook') }}">Back to result</a></h3>
 
-    <h2>Review | average rating {{ book.mean_review_rating }}</h2>
+    <h3>{{ book.title }}</h3>
+    <p>author : {{ book.author }}</p>
+    <p>year : {{ book.year }}</p>
+    <p>isbn : {{ book.isbn }}</p>
+    <p>rating count : {{ book.work_rating_count }}</p>
+    <p> average rating : {{ book.average_rating }}</p> 
+    <p><a href="{{ url_for('searchBook') }}">Back to result</a></p><br>
+
+    <h3>Review <span id="greet">rating: {% if book.mean_review_rating is none %}0{% else %}{{ book.mean_review_rating }}{% endif %}</span></h2>
     {% for user in users_review %}
-        <h3>{{ user.username }}, rating {{ user.rating }}</h3>
-        <h3>{{ user.review }}
+        <div class="card" style="width: 100%;">
+          <div class="card-body">
+            <h5 class="card-title">{{ user.username }}, rating {{ user.rating }}</h5>
+            <p class="card-text">
+                {{ user.review }}
+            </p>
+          </div>
+        </div>
     {% endfor %}
-    <h1>Give your review</h1>
+    <br>
+    <h3>Give your review</h3>
+    <!--
     <form action="{{ url_for('bookDetail', id_api = book.id_api) }}" method="POST">
         <input type="text" name="review" placeholder="leave your review"><br>
         <h3>your rating</h3><input type="number" name="rating">
         <input type="submit">
     </form>
+-->
+    <form action="{{ url_for('bookDetail', id_api = book.id_api) }}" method="POST">
+        <div class="form-group row">
+            <label for="rating" class="col-sm-2 col-form-label">Rating: <span id="display-rating">2</span></label>
+            <div class="col-sm-8">
+              <input type="range" class="custom-range" min="0" max="5" step="1" id="rating" name="rating">
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="review" class="col-sm-2 col-form-label">Leave Review</label>
+            <div class="col-sm-6">
+                <textarea class="form-control" id="review" name="review"></textarea>
+            </div>
+
+            <div class="form-group row">
+                <div class="col-sm-10">
+                  <button type="submit" class="btn btn-primary">submit</button>
+            </div>
+
+        </div>
+    </form>
+    <script>
+        window.addEventListener('DOMContentLoaded', (event) => {
+            var score = document.querySelector('#rating');
+            var display = document.querySelector('span#display-rating')
+            display.innerHTML = score.value
+            score.addEventListener('input', function(event){
+                display.innerHTML = event.target.value
+            });
+        });
+        
+
+    </script>
 {% endif %}
 {% endblock %}

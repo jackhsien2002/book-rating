@@ -1,21 +1,55 @@
 {% extends "layout.html" %}
 
 {% block body %}
-<a href="{{ url_for('searchBook') }}">Search Again</a>
+
 {% if not books[0] %}
     <h2>search is not found</h2>
 {% else %}
-    <h2>Search results is sorted by popularity</h2>
+    <h2>Search results</h2>
 
     <ul>
     	{% for book in books %}
+          <a href="{{ url_for('bookDetail', id_api = book['book_id_api']) }}" class="list-group-item list-group-item-action">
+            <div class="d-flex w-100 justify-content-between">
+              <h6 class="mb-1">{{ book["title"] }}</h6>
+            </div>
+            <p class="mb-1">author: {{ book["author"] }}</p>
+            <p class="mb-1">average rating: {{ book["average_rating"] }}</p>
+            <p class="mb-1">id: {{ book["book_id_api"] }}</p>
+        </a>
+        <!--
     		<li>
-                <p><a href="{{ url_for('bookDetail', id_api = book['book_id_api']) }}"> title: {{ book["title"] }} </a></p>
+                <p><a href="{{ url_for('bookDetail', id_api = book['book_id_api']) }}">{{ book["title"] }} </a></p>
     			<p>author: {{ book["author"] }}</p>			
     			<p>average rating: {{ book["average_rating"] }}</p>
                 <p>check book id: {{ book["book_id_api"] }}</p>
     		</li>
+        -->
     	{% endfor %}
     </ul>
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const onTag = 'list-group-item list-group-item-action active';
+            const offTag = 'list-group-item list-group-item-action';
+            var bookList = document.querySelectorAll('.list-group-item');;
+            bookList.forEach(function(element){
+                element.addEventListener('mouseenter', function(){
+                    element.setAttribute('class', onTag);
+                })
+                element.addEventListener('mouseleave', function(){
+                    element.setAttribute('class', offTag);
+                })
+            });
+        });
+        window.addEventListener('scroll', function(e){
+            if (window.scrollY + window.innerHeight >= document.body.offsetHeight) {
+                console.log("add more post")
+            }
+        });
+        function addBook() {
+            //do something here
+        }
+
+    </script>
 {% endif %}
 {% endblock %}

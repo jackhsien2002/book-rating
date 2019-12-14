@@ -1,0 +1,7 @@
+#greet {
+    font-size : 15px;
+}
+
+div.header, div.title, div.body {
+    margin : auto;
+}
