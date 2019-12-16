@@ -24,7 +24,7 @@ Celery is used for concurrency. Celery act as a broker, which issue the tasks fr
 ![home](/demo/home.jpg)
 ![login](/demo/login.jpg)
 ![search form](/demo/search.jpg)
-![search result](/demo/search result.jpg)
+![search result](/demo/search-result.jpg)
 ![book detail](/demo/book-detail.jpg)
 ![book review](/demo/give-review.jpg)
 ![logout](/demo/logout.jpg)
