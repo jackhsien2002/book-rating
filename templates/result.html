@@ -28,9 +28,13 @@
     	{% endfor %}
     </ul>
     <script>
+
         document.addEventListener('DOMContentLoaded', (event) => {
+            
             const onTag = 'list-group-item list-group-item-action active';
             const offTag = 'list-group-item list-group-item-action';
+
+
             var bookList = document.querySelectorAll('.list-group-item');;
             bookList.forEach(function(element){
                 element.addEventListener('mouseenter', function(){
@@ -41,14 +45,6 @@
                 })
             });
         });
-        window.addEventListener('scroll', function(e){
-            if (window.scrollY + window.innerHeight >= document.body.offsetHeight) {
-                console.log("add more post")
-            }
-        });
-        function addBook() {
-            //do something here
-        }
 
     </script>
 {% endif %}

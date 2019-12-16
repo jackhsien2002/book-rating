@@ -8,6 +8,8 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 import xml.etree.ElementTree as ET
 from celery_worker import make_celery 
 import time
+import json
+import pdb
 
 app = Flask(__name__)
 #app.config['DEBUG'] = True
@@ -35,7 +37,7 @@ engine = create_engine(os.getenv("DATABASE_URL"))
 db = scoped_session(sessionmaker(bind=engine))
 
 #google_api_key
-KEY = "u0lC95Zxu3T3dwPdGcvlA";
+KEY = os.getenv("GOOD_READ_API_KEY");
 
 @celery.task(name = 'application.background_test')
 def background_test(amount):
@@ -56,6 +58,8 @@ def homePage():
 def searchBook():
 	return render_template("search.html", username = session["username"])
 
+books = []
+increment = 4
 @app.route("/result", methods = ["POST"])
 def bookSearchResult():
 	query_string=""
@@ -67,9 +71,25 @@ def bookSearchResult():
 	query_string = " ".join(query_list)
 
 	#using goodreads search API to search for the books we want
+	global books 
 	books = findBook("https://www.goodreads.com/search/index.xml", query_string)
-
+	
 	return render_template("result.html", books = books, username = session["username"])
+
+@app.route("/addBook", methods = ["POST"])
+def addBook():
+	'''
+	given start and end as integer, return object that corresponding to index
+	'''
+
+	start = int(request.form.get('start'))
+	end = int(request.form.get('end'))
+	print('debugging================================')
+	print('add book from', start, 'to', end)
+	global books
+	result = books[start:end]
+
+	return jsonify(result)
 
 def findBook(url, q):
 	'''
@@ -107,8 +127,7 @@ def bookDetail(id_api):
 	'''
 	given a book id, send a request to goodread
 	'''
-	book = db.execute("SELECT * FROM books WHERE id_api=:id_api",
-				{"id_api" : id_api}).fetchone()
+	book = db.execute("SELECT * FROM books WHERE id_api=:id_api", {"id_api" : id_api}).fetchone()
 
 	#if book does not have id in data base
 	if book is None:
@@ -178,10 +197,8 @@ def bookDetail(id_api):
 
 			db.execute(sql_command, sql_parameters)
 			db.commit()
-
 			mean_review_rating = getMeanReviewRating(int(id_api))
-			updateMeanRating(int(id_api), mean_review_rating)
-			book.mean_review_rating = mean_review_rating
+			book = updateMeanRating(int(id_api), mean_review_rating)
 			
 	users_review = getBookReview(int(id_api))
 
@@ -232,6 +249,12 @@ def updateMeanRating(book_id, mean_review_rating):
 					  "book_id" : book_id}
 	db.execute(sql_command, sql_parameters)
 	db.commit()
+
+	sql_command = "SELECT * FROM books WHERE id_api=:book_id"
+	sql_parameters = {'book_id' : book_id}
+	book = db.execute(sql_command, sql_parameters).fetchone()
+	return book
+
 
 @app.route("/login", methods = ["POST", "GET"])
 def loginPage():

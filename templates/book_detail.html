@@ -13,7 +13,6 @@
     <p>isbn : {{ book.isbn }}</p>
     <p>rating count : {{ book.work_rating_count }}</p>
     <p> average rating : {{ book.average_rating }}</p> 
-    <p><a href="{{ url_for('searchBook') }}">Back to result</a></p><br>
 
     <h3>Review <span id="greet">rating: {% if book.mean_review_rating is none %}0{% else %}{{ book.mean_review_rating }}{% endif %}</span></h2>
     {% for user in users_review %}
