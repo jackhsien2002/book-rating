@@ -19,14 +19,14 @@ Celery is used for concurrency. Celery act as a broker, which issue the tasks fr
 5. User can give a review and rating to a book. If user has left a review, any more submission of review will not be updated on the site. Also, average ratings will be caculated and displayed in the review section.
 6. User can rate the book with scroll bar. Scroll bar contains a jar that reflects degree of rating, while a circle pin move along the jar to determine rating. To inform user about rating, javascript will keep track of rating of the scroll bar and update current rating on the rating panel. 
 # Demo
-[video](https://www.youtube.com/watch?v=iFNce76pEf8&feature=youtu.be)
+[video demo](https://www.youtube.com/watch?v=iFNce76pEf8&feature=youtu.be)
 
 ![home](demo/home.jpg)
 ![login](/demo/login.jpg)
-![search-form](/demo/search.jpg)
-![search-result](/demo/search-result.jpg)
-![book-detail](/demo/book-detail.jpg)
-![book-review](/demo/give-review.jpg)
+![search form](/demo/search.jpg)
+![search result](/demo/search-result.jpg)
+![book detail](/demo/book-detail.jpg)
+![book review](/demo/give-review.jpg)
 ![logout](/demo/logout.jpg)
 
 
