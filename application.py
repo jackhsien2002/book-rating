@@ -134,47 +134,13 @@ def bookDetail(id_api):
 		#update lacking data to data base
 		#store column (isbn, title, author, year, id_api, work_rating_count, average_rating) 
 		url = "https://www.goodreads.com/book/show.xml"
-		start = time.time()
 		response = requests.get(url, params = {"key" : KEY, "id" : id_api})
-		end = time.time()
-		print(f"it takes {end - start} seconds to fetch response from goodreads")
-		####
-		start = time.time()
 
 		root = ET.fromstring(response.content)
-		#getting book_node at xml
 		book_node = root.find("book")
-		#parsing information
-		isbn = book_node.find("isbn").text
-		title = book_node.find("title").text
-		author = book_node.find("authors").find("author").find("name").text
-		year = book_node.find("publication_year").text
-		if year != None:
-			year = int(year)
-		average_rating = book_node.find("average_rating").text
-		if average_rating != None:
-			average_rating = float(average_rating)
-		work_rating_count = book_node.find("work").find("ratings_count").text
-		
-		end = time.time()
-		print(f"{end - start} second to finish root finding")
-		###
+		book_details = parseDetailFromBookNode(book_node, id_api)
 
-		start = time.time()
-		#convert book information into dcitionary
-		book = {
-			"isbn" : isbn,
-			"title" : title, 
-        	"author" : author,
-        	"year" : year, 
-        	"id_api" : int(id_api),
-        	"work_rating_count" : int(work_rating_count), 
-        	"average_rating" : float(average_rating),
-        	"mean_review_rating" : None
-        }
-		write_book_to_database.delay(book)
-		end = time.time()
-		print(f"{end - start} seconds to send celery worker to load data to database")
+		write_book_to_database.delay(book_details)
 
 	if request.method == "POST":
 
@@ -205,8 +171,34 @@ def bookDetail(id_api):
 	return render_template("book_detail.html", 
 							book = book, 
 							username = session["username"], 
-							users_review = users_review
-							)
+							users_review = users_review)
+
+def parseDetailFromBookNode(book_node, id_api):
+	'''
+	given a book node, parse book detail from its node
+	return a book dictionary
+	'''
+	isbn = book_node.find("isbn").text
+	title = book_node.find("title").text
+	author = book_node.find("authors").find("author").find("name").text
+	year = book_node.find("publication_year").text
+	if year != None:
+		year = int(year)
+	average_rating = book_node.find("average_rating").text
+	if average_rating != None:
+		average_rating = float(average_rating)
+	work_rating_count = book_node.find("work").find("ratings_count").text
+
+	return {
+		"isbn" : isbn,
+		"title" : title, 
+		"author" : author,
+		"year" : year, 
+		"id_api" : int(id_api),
+		"work_rating_count" : int(work_rating_count), 
+		"average_rating" : float(average_rating),
+		"mean_review_rating" : None
+	}
 
 def getBookReview(book_id):
 	'''given book id, retrieve its user review, rating
