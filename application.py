@@ -39,17 +39,6 @@ db = scoped_session(sessionmaker(bind=engine))
 #google_api_key
 KEY = os.getenv("GOOD_READ_API_KEY");
 
-@celery.task(name = 'application.background_test')
-def background_test(amount):
-	time.sleep(amount)
-	return True
-
-@app.route("/test")
-def test():
-	background_test.delay(5)
-	return "A background time is running, wait for 3 seconds"
-
-
 @app.route("/")
 def homePage():
 	return render_template("index.html")
@@ -123,7 +112,7 @@ def findBook(url, q):
 		books = None
 		return books
 
-@celery.task(name= 'application.write_book_to_database')
+
 def write_book_to_database(book_info):
 	sql_command = "INSERT INTO books (isbn, title, author, year, id_api, work_rating_count, average_rating)\
 					 VALUES (:isbn, :title, :author, :year, :id_api, :work_rating_count, :average_rating)"
@@ -153,7 +142,7 @@ def bookDetail(id_api):
 		book_node = root.find("book")
 		book = parseDetailFromBookNode(book_node, id_api)
 		#invoke celery to work on writing book details to database
-		write_book_to_database.delay(book)
+		write_book_to_database(book)
 
 	#if user submit a review for the book
 	if request.method == "POST":
