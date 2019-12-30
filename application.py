@@ -2,6 +2,7 @@ import os
 import settings
 import requests
 from flask import Flask, session, render_template, request, jsonify
+from flask import redirect, url_for
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -283,7 +284,7 @@ def loginPage():
 		if is_exist:			
 			session["username"] = username
 			session["user_id"] = getUserId(username)
-			return render_template("search.html", username = session["username"])							
+			return redirect(url_for('searchBook'))							
 		else:
 			return render_template("login.html", error_message = error_message)
 
