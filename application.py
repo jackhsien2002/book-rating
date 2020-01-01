@@ -14,15 +14,15 @@ import pdb
 
 app = Flask(__name__)
 #app.config['DEBUG'] = True
+'''
 app.config.update(
 	DEBUG = True,
 	CELERY_BROKER_URL='redis://localhost:6379',
 	CELERY_RESULT_BACKEND='redis://localhost:6379'
 )
-
 celery = make_celery(app)
-
-
+'''
+mailgun_secret_key_value = None
 
 # Check for environment variable
 if not os.getenv("DATABASE_URL"):
@@ -372,5 +372,4 @@ def getAPI(isbn):
 	    		review_count = book.work_rating_count,
 	    		average_score = str(book.average_rating)
 		   )
-
-
+app.run(debug=True)

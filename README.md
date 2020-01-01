@@ -8,10 +8,6 @@ Books is a book review website where readers can share their opinion on books fr
 # Package
 Please refers to requirement.txt for more details
 
-"dotenv" package is used to import secret key from environment variable
-
-Celery is used for concurrency. Celery act as a broker, which issue the tasks from queue to worker(redis). Worker can perform tasks in background for Flask while Flask proceed to do other tasks. Here, Celery and workers help manipulate database for us. When user search for the books that does not exist in database, Books will fetch book information from 'goodread' and then invoke Celery worker to write information to database. While Celery is working on database, Books return fetch result to client without waiting for database writing.
-
 # Feature
 1. When user enters Books website, they can signup an account and login with a username and password. If user try to sign up a account that has been in database, error messages will be displayed on the page.
 2. Once they login, they can search for books they want. There are three search fields, including isbn, title and author. Once these fields are submitted to Flask backend, they are translated to query string and sent to goodread. The result of query will be listed by revelance that are defined by goodread algorithms.
